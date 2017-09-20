@@ -50,33 +50,39 @@ values."
      ;; better-defaults
      emacs-lisp
      git
-     markdown
+     (markdown
+      :variables
+      markdown-command "pandoc -c /home/rietmann/.emacs.d/private/markdown_css --from markdown_github -t html5 --mathjax --highlight-style pygments --standalone"
+      )
      org
      ;; (shell :variables
      ;;        shell-default-height 30
      ;;        shell-default-position 'bottom)
      spell-checking
      syntax-checking
-
-     (version-control :variables
-                      version-control-diff-tool 'diff-hl)
      
-     toml
+     ;; version-control
+     (version-control :variables
+                      version-control-diff-tool 'git-gutter+)
+     
      docker
      ;; themes-megapack
      ;; -- language support
      ;; gtags ;; tags for c/c++ and other langs
      ;; irony
+
      (ycmd :variables
-           ycmd-server-command (list "/usr/bin/python" (file-truename "~/build/ycmd/ycmd"))
+           ycmd-server-command (list "/usr/bin/python" (file-truename "~/build/ycmd-git/ycmd"))
            ycmd-force-semantic-completion t)
+
      rtags
      (c-c++ :variables
             c-c++-default-mode-for-headers 'c++-mode
             ;; c-c++-enable-clang-support t
             )     
      latex
-     python
+     (python
+      )
      markdown
      ess
      (haskell :variables
@@ -92,6 +98,11 @@ values."
    ;; packages, then consider creating a layer. You can also put the
    ;; configuration in `dotspacemacs/user-config'.
    dotspacemacs-additional-packages '(
+                                      flycheck-mypy
+                                      flycheck-clang-tidy
+                                      flycheck-clang-analyzer
+                                      dracula-theme
+                                      groovy-mode
                                       ;; focus-autosave-mode
                                       )
    ;; A list of packages that cannot be updated.
@@ -129,7 +140,7 @@ values."
    ;; when the current branch is not `develop'. Note that checking for
    ;; new versions works via git commands, thus it calls GitHub services
    ;; whenever you start Emacs. (default nil)
-   dotspacemacs-check-for-update nil
+   dotspacemacs-check-for-update t
    ;; If non-nil, a form that evaluates to a package directory. For example, to
    ;; use different package directories for different Emacs versions, set this
    ;; to `emacs-version'.
@@ -167,8 +178,10 @@ values."
    ;; with 2 themes variants, one dark and one light)
    dotspacemacs-themes '(spacemacs-dark
                          spacemacs-light
+                         dracula
                          sanityinc-solarized-dark
-                         sanityinc-solarized-light)
+                         sanityinc-solarized-light
+                         )
    ;; If non nil the cursor color matches the state color in GUI Emacs.
    dotspacemacs-colorize-cursor-according-to-state t
    ;; Default font, or prioritized list of fonts. `powerline-scale' allows to
@@ -293,8 +306,18 @@ values."
    ;; scrolling overrides the default behavior of Emacs which recenters point
    ;; when it reaches the top or bottom of the screen. (default t)
    dotspacemacs-smooth-scrolling t
-   ;; If non nil line numbers are turned on in all `prog-mode' and `text-mode'
-   ;; derivatives. If set to `relative', also turns on relative line numbers.
+   ;; Control line numbers activation.
+   ;; If set to `t' or `relative' line numbers are turned on in all `prog-mode' and
+   ;; `text-mode' derivatives. If set to `relative', line numbers are relative.
+   ;; This variable can also be set to a property list for finer control:
+   ;; '(:relative nil
+   ;;   :disabled-for-modes dired-mode
+   ;;                       doc-view-mode
+   ;;                       markdown-mode
+   ;;                       org-mode
+   ;;                       pdf-view-mode
+   ;;                       text-mode
+   ;;   :size-limit-kb 1000)
    ;; (default nil)
    dotspacemacs-line-numbers nil
    ;; Code folding method. Possible values are `evil' and `origami'.
@@ -317,7 +340,7 @@ values."
    ;; List of search tool executable names. Spacemacs uses the first installed
    ;; tool of the list. Supported tools are `ag', `pt', `ack' and `grep'.
    ;; (default '("ag" "pt" "ack" "grep"))
-   dotspacemacs-search-tools '("ag" "pt" "ack" "grep")
+   dotspacemacs-search-tools '("rg" "ag" "pt" "ack" "grep")
    ;; The default package repository used if no explicit repository has been
    ;; specified with an installed package.
    ;; Not used for now. (default nil)
@@ -338,7 +361,31 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
   (push "/usr/local/share/emacs/site-lisp/rtags/" load-path)
-  )
+  ;; Bind clang-format-region to C-M-tab in all modes:
+  (global-set-key [C-M-tab] 'clang-format-region)
+  ;; Bind clang-format-buffer to tab on the c++-mode only:
+  (add-hook 'c++-mode-hook 'clang-format-bindings)
+  (defun clang-format-bindings ()
+    (define-key c++-mode-map [C-M-iso-lefttab] 'clang-format-buffer))
+  (defvar c++-clang-format-on-save nil
+    "Should emacs do clang-format on save?")
+  ;; Hook function
+  ;; might be interesting... http://www.josephlisee.com/2015/02/21/exploring-clang-format/
+  (defun clang-format-before-save ()
+    "Add this to .emacs to clang-format on save (add-hook 'before-save-hook 'clang-format-before-save)."
+    
+    (interactive)
+    (when (and c++-clang-format-on-save (not (and (eq major-mode 'c++-mode) (string= (file-name-extension (buffer-file-name)) "in"))))
+    ;; (when (and (eq major-mode 'c++-mode) (string= (file-name-extension (buffer-file-name)) "in"))
+      (message "Running clang format!")
+      (clang-format-buffer)
+      ))
+  
+  ;; ;; Install hook to use clang-format on save
+  (add-hook 'before-save-hook 'clang-format-before-save)
+
+  ;; )
+)
 
 (defun dotspacemacs/user-config ()
   "Configuration function for user code.
@@ -348,7 +395,9 @@ This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
   (windmove-default-keybindings)
-
+  (require 'flycheck-mypy)
+  
+  ;; (setq shell-file-name "/bin/bash")
   ;; paradox token
   (setq paradox-github-token "069f120e6a174c4fe45de2f9821f2f016c7bda04")
   ;; Scrolling
@@ -363,7 +412,7 @@ you should place your code here."
   (setq powerline-default-separator 'slant)
   (setq diff-hl-side 'right)
   ;; ivy settings
-  ;; Use Enter on a directory to navigate into the directory, not open it with dried.
+  ;; Use Enter on a directory to navigate into the directory, not open it with dired.
   (define-key ivy-minibuffer-map (kbd "C-m") 'ivy-alt-done)
 
   (define-key prog-mode-map (kbd "C-;") 'comment-line)
@@ -380,10 +429,64 @@ you should place your code here."
               (local-unset-key (kbd "C-;"))
               (define-key flyspell-mode-map (kbd "C-;") 'comment-line)
               ))
+  ;; mypy and flake8 with pyenv
+  (add-hook 'anaconda-mode-hook
+            (lambda ()
+              (message "Updating local flake8 and mypy executables")
+              (setq flycheck-python-flake8-executable (replace-regexp-in-string "\n\\'" "" (shell-command-to-string "pyenv which flake8")))
+              (setq flycheck-python-mypy-executable (replace-regexp-in-string "\n\\'" "" (shell-command-to-string "pyenv which mypy")))
+              ;; flake8 is exclusive, so we have to force the mypy checker to run
+              (flycheck-add-next-checker 'python-flake8 'python-mypy)
+              ;; (add-to-list 'python-shell-extra-pythonpaths "/opt/ros/kinetic/lib/python2.7/dist-packages")
+              ))
 
+
+  ;; fancier flycheck setup for C++
+  ;; (with-eval-after-load 'flycheck
+  ;;   (require 'flycheck-clang-tidy)
+  ;;   (add-hook 'flyspell-mode-hook #'flycheck-clang-tidy-setup)
+  ;;   (setq flycheck-clang-tidy-executable "/usr/bin/clang-tidy-5.0")
+  ;;   )
+
+  ;; (use-package flycheck-clang-tidy
+  ;;   :ensure t
+  ;;   :after flycheck
+  ;;   :config (lambda()
+  ;;             (setq flycheck-clang-tidy-executable "/usr/bin/clang-tidy-5.0")
+  ;;             (flycheck-clang-tidy-setup)
+  ;;             )
+  ;;   )
+
+  
+
+  ;; (use-package flycheck-clang-analyzer
+  ;;   :ensure t
+  ;;   :after flycheck
+  ;;   :config (lambda()
+  ;;             (setq flycheck-clang-analyzer-executable "/usr/bin/clang-5.0")
+  ;;             (flycheck-clang-analyzer-setup)
+  ;;             ))
+
+  ;; (with-eval-after-load 'flycheck
+  ;;   (require 'flycheck-clang-analyzer)
+  ;;   (require 'flycheck-clang-tidy)
+  ;;   (flycheck-add-next-checker 'rtags 'clang-analyzer)
+  ;;   (flycheck-add-next-checker 'rtags 'clang-tidy)
+  ;;   )
+
+  ;; (defun my-flycheck-rtags-setup ()
+  ;;   (flycheck-select-checker 'rtags)
+  ;;   (setq-local flycheck-highlighting-mode nil) ;; RTags creates more accurate overlays.
+  ;;   (setq-local flycheck-check-syntax-automatically nil))
+  ;; (add-hook 'c-mode-hook #'my-flycheck-rtags-setup)
+  ;; (add-hook 'c++-mode-hook #'my-flycheck-rtags-setup)
+
+  
+  
   (add-hook 'c-mode-common-hook (lambda ()
                                   ;; (message "setting f5 to compile")
-                                  (global-set-key (kbd "<f5>") 'compile)))
+                                  (global-set-key (kbd "<f5>") 'compile)
+                                  ))
   
   (add-hook 'markdown-mode-hook (lambda ()
                                   (message "changing M-<left> and M-<right>")
@@ -416,10 +519,17 @@ you should place your code here."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(custom-safe-themes
+   (quote
+    ("ff7625ad8aa2615eae96d6b4469fcc7d3d20b2e1ebc63b761a349bebbb9d23cb" default)))
  '(package-selected-packages
    (quote
-    (insert-shebang fish-mode company-shell helm helm-core packed smartparens evil avy projectile hydra dash powershell rvm ruby-tools ruby-test-mode rubocop rspec-mode robe rbenv rake minitest chruby bundler inf-ruby focus-autosave-mode org-projectile org-present org-pomodoro alert log4e gntp org-download htmlize gnuplot dockerfile-mode docker tablist docker-tramp phpunit phpcbf php-extras php-auto-yasnippets drupal-mode php-mode toml-mode flycheck-ycmd company-ycmd ycmd request-deferred deferred helm-pydoc helm-hoogle helm-gitignore helm-css-scss helm-company helm-c-yasnippet flyspell-correct-helm org markdown-mode skewer-mode simple-httpd json-snatcher json-reformat multiple-cursors js2-mode haml-mode fringe-helper git-gutter+ git-gutter flyspell-correct pos-tip flycheck magit magit-popup git-commit with-editor ctable ess julia-mode counsel swiper ivy web-completion-data dash-functional tern irony ghc haskell-mode company yasnippet auctex anaconda-mode pythonic auto-complete helm-themes helm-swoop helm-projectile helm-mode-manager helm-flx helm-descbinds helm-ag ace-jump-helm-line yapfify yaml-mode ws-butler window-numbering which-key wgrep web-mode web-beautify volatile-highlights vi-tilde-fringe uuidgen use-package toc-org tagedit spacemacs-theme spaceline smex smeargle slim-mode scss-mode sass-mode rtags restart-emacs request rainbow-delimiters quelpa pyvenv pytest pyenv-mode py-isort pug-mode popwin pip-requirements persp-mode pcre2el paradox orgit org-plus-contrib org-bullets open-junk-file neotree mwim move-text mmm-mode markdown-toc magit-gitflow macrostep lorem-ipsum livid-mode live-py-mode linum-relative link-hint less-css-mode json-mode js2-refactor js-doc ivy-hydra irony-eldoc intero info+ indent-guide ido-vertical-mode hy-mode hungry-delete hlint-refactor hl-todo hindent highlight-parentheses highlight-numbers highlight-indentation hide-comnt help-fns+ helm-make haskell-snippets google-translate golden-ratio gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe git-gutter-fringe+ gh-md flyspell-correct-ivy flycheck-pos-tip flycheck-irony flycheck-haskell flx-ido fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-magit evil-lisp-state evil-indent-plus evil-iedit-state evil-exchange evil-escape evil-ediff evil-args evil-anzu eval-sexp-fu ess-smart-equals ess-R-object-popup ess-R-data-view emmet-mode elisp-slime-nav dumb-jump disaster diff-hl define-word cython-mode counsel-projectile company-web company-tern company-statistics company-irony-c-headers company-irony company-ghci company-ghc company-cabal company-c-headers company-auctex company-anaconda column-enforce-mode color-theme-sanityinc-solarized coffee-mode cmm-mode cmake-mode clean-aindent-mode clang-format auto-yasnippet auto-highlight-symbol auto-dictionary auto-compile aggressive-indent adaptive-wrap ace-window ace-link ac-ispell)))
- '(paradox-automatically-star t))
+    (flycheck-clang-analyzer flycheck-clang-tidy ivy-rtags org-category-capture iedit groovy-mode powerline flycheck-haskell let-alist undo-tree diminish highlight async f s dracula-theme winum unfill fuzzy auctex-latexmk flycheck-mypy insert-shebang fish-mode company-shell helm helm-core packed smartparens evil avy projectile hydra dash powershell rvm ruby-tools ruby-test-mode rubocop rspec-mode robe rbenv rake minitest chruby bundler inf-ruby focus-autosave-mode org-projectile org-present org-pomodoro alert log4e gntp org-download htmlize gnuplot dockerfile-mode docker tablist docker-tramp phpunit phpcbf php-extras php-auto-yasnippets drupal-mode php-mode toml-mode flycheck-ycmd company-ycmd ycmd request-deferred deferred helm-pydoc helm-hoogle helm-gitignore helm-css-scss helm-company helm-c-yasnippet flyspell-correct-helm org markdown-mode skewer-mode simple-httpd json-snatcher json-reformat multiple-cursors js2-mode haml-mode fringe-helper git-gutter+ git-gutter flyspell-correct pos-tip flycheck magit magit-popup git-commit with-editor ctable ess julia-mode counsel swiper ivy web-completion-data dash-functional tern irony ghc haskell-mode company yasnippet auctex anaconda-mode pythonic auto-complete helm-themes helm-swoop helm-projectile helm-mode-manager helm-flx helm-descbinds helm-ag ace-jump-helm-line yapfify yaml-mode ws-butler window-numbering which-key wgrep web-mode web-beautify volatile-highlights vi-tilde-fringe uuidgen use-package toc-org tagedit spacemacs-theme spaceline smex smeargle slim-mode scss-mode sass-mode rtags restart-emacs request rainbow-delimiters quelpa pyvenv pytest pyenv-mode py-isort pug-mode popwin pip-requirements persp-mode pcre2el paradox orgit org-plus-contrib org-bullets open-junk-file neotree mwim move-text mmm-mode markdown-toc magit-gitflow macrostep lorem-ipsum livid-mode live-py-mode linum-relative link-hint less-css-mode json-mode js2-refactor js-doc ivy-hydra irony-eldoc intero info+ indent-guide ido-vertical-mode hy-mode hungry-delete hlint-refactor hl-todo hindent highlight-parentheses highlight-numbers highlight-indentation hide-comnt help-fns+ helm-make haskell-snippets google-translate golden-ratio gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe git-gutter-fringe+ gh-md flyspell-correct-ivy flycheck-pos-tip flycheck-irony flx-ido fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-magit evil-lisp-state evil-indent-plus evil-iedit-state evil-exchange evil-escape evil-ediff evil-args evil-anzu eval-sexp-fu ess-smart-equals ess-R-object-popup ess-R-data-view emmet-mode elisp-slime-nav dumb-jump disaster diff-hl define-word cython-mode counsel-projectile company-web company-tern company-statistics company-irony-c-headers company-irony company-ghci company-ghc company-cabal company-c-headers company-auctex company-anaconda column-enforce-mode color-theme-sanityinc-solarized coffee-mode cmm-mode cmake-mode clean-aindent-mode clang-format auto-yasnippet auto-highlight-symbol auto-dictionary auto-compile aggressive-indent adaptive-wrap ace-window ace-link ac-ispell)))
+ '(paradox-automatically-star t)
+ '(safe-local-variable-values
+   (quote
+    ((c++-clang-format-on-save . t)
+     (c-default-style . "linux")))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
