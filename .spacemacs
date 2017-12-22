@@ -52,7 +52,7 @@ values."
      git
      (markdown
       :variables
-      markdown-command "pandoc -c /home/rietmann/.emacs.d/private/markdown_css --from markdown_github -t html5 --mathjax --highlight-style pygments --standalone"
+      markdown-command "pandoc -c /home/rietmann/.emacs.d/private/markdown_css/github-pandoc.css --from markdown_github -t html5 --mathjax --highlight-style pygments --standalone"
       )
      org
      ;; (shell :variables
@@ -71,11 +71,13 @@ values."
      ;; gtags ;; tags for c/c++ and other langs
      ;; irony
 
-     (ycmd :variables
-           ycmd-server-command (list "/usr/bin/python" (file-truename "~/build/ycmd-git/ycmd"))
-           ycmd-force-semantic-completion t)
+     ;; (ycmd :variables
+     ;;       ycmd-server-command (list "/usr/bin/python" (file-truename "~/build/ycmd-git/ycmd"))
+     ;;       ycmd-force-semantic-completion t)
 
      rtags
+
+
      (c-c++ :variables
             c-c++-default-mode-for-headers 'c++-mode
             ;; c-c++-enable-clang-support t
@@ -105,6 +107,8 @@ values."
                                       flycheck-clang-analyzer
                                       dracula-theme
                                       groovy-mode
+                                      lsp-mode
+                                      company-lsp
                                       ;; focus-autosave-mode
                                       )
    ;; A list of packages that cannot be updated.
@@ -193,6 +197,11 @@ values."
                                :weight normal
                                :width normal
                                :powerline-scale 1.45)
+   ;; dotspacemacs-default-font '("Inconsolata"
+   ;;                             :size 16
+   ;;                             :weight normal
+   ;;                             :width normal
+   ;;                             :powerline-scale 1.45)
    ;; dotspacemacs-default-font '("Source Code Pro"
    ;;                             :size 13
    ;;                             :weight normal
@@ -386,6 +395,9 @@ before packages are loaded. If you are unsure, you should try in setting them in
   ;; ;; Install hook to use clang-format on save
   (add-hook 'before-save-hook 'clang-format-before-save)
 
+  
+  
+
   ;; )
 )
 
@@ -441,7 +453,33 @@ you should place your code here."
               (flycheck-add-next-checker 'python-flake8 'python-mypy)
               ;; (add-to-list 'python-shell-extra-pythonpaths "/opt/ros/kinetic/lib/python2.7/dist-packages")
               ))
-  
+
+  ;; cquery
+  (use-package cquery
+    :load-path
+    "/home/rietmann/build/cquery/emacs"
+    :init
+    (progn
+      (require 'cc-mode)
+      (require 'lsp-mode)
+      (require 'cl-lib)
+      (require 'subr-x))
+    :config
+    ;; config
+    (setq cquery-executable "/home/rietmann/.local/stow/cquery/bin/cquery")
+    )
+  (add-hook 'c-mode-common-hook (lambda ()
+                                  ;; (message "setting f5 to compile")
+                                  (lsp-cquery-enable)
+                                  ))
+
+  (with-eval-after-load 'company
+    (push 'company-lsp company-backends)
+    )
+
+  (with-eval-after-load 'lsp-mode
+    (require 'lsp-flycheck))
+
   ;; toggle line numbers when emacs is in focus or not
   ;; (add-hook 'focus-out-hook
   ;;           (lambda ()
@@ -533,11 +571,31 @@ you should place your code here."
     ("ff7625ad8aa2615eae96d6b4469fcc7d3d20b2e1ebc63b761a349bebbb9d23cb" default)))
  '(package-selected-packages
    (quote
-    (racer flycheck-rust seq cargo rust-mode flycheck-clang-analyzer flycheck-clang-tidy ivy-rtags org-category-capture iedit groovy-mode powerline flycheck-haskell let-alist undo-tree diminish highlight async f s dracula-theme winum unfill fuzzy auctex-latexmk flycheck-mypy insert-shebang fish-mode company-shell helm helm-core packed smartparens evil avy projectile hydra dash powershell rvm ruby-tools ruby-test-mode rubocop rspec-mode robe rbenv rake minitest chruby bundler inf-ruby focus-autosave-mode org-projectile org-present org-pomodoro alert log4e gntp org-download htmlize gnuplot dockerfile-mode docker tablist docker-tramp phpunit phpcbf php-extras php-auto-yasnippets drupal-mode php-mode toml-mode flycheck-ycmd company-ycmd ycmd request-deferred deferred helm-pydoc helm-hoogle helm-gitignore helm-css-scss helm-company helm-c-yasnippet flyspell-correct-helm org markdown-mode skewer-mode simple-httpd json-snatcher json-reformat multiple-cursors js2-mode haml-mode fringe-helper git-gutter+ git-gutter flyspell-correct pos-tip flycheck magit magit-popup git-commit with-editor ctable ess julia-mode counsel swiper ivy web-completion-data dash-functional tern irony ghc haskell-mode company yasnippet auctex anaconda-mode pythonic auto-complete helm-themes helm-swoop helm-projectile helm-mode-manager helm-flx helm-descbinds helm-ag ace-jump-helm-line yapfify yaml-mode ws-butler window-numbering which-key wgrep web-mode web-beautify volatile-highlights vi-tilde-fringe uuidgen use-package toc-org tagedit spacemacs-theme spaceline smex smeargle slim-mode scss-mode sass-mode rtags restart-emacs request rainbow-delimiters quelpa pyvenv pytest pyenv-mode py-isort pug-mode popwin pip-requirements persp-mode pcre2el paradox orgit org-plus-contrib org-bullets open-junk-file neotree mwim move-text mmm-mode markdown-toc magit-gitflow macrostep lorem-ipsum livid-mode live-py-mode linum-relative link-hint less-css-mode json-mode js2-refactor js-doc ivy-hydra irony-eldoc intero info+ indent-guide ido-vertical-mode hy-mode hungry-delete hlint-refactor hl-todo hindent highlight-parentheses highlight-numbers highlight-indentation hide-comnt help-fns+ helm-make haskell-snippets google-translate golden-ratio gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe git-gutter-fringe+ gh-md flyspell-correct-ivy flycheck-pos-tip flycheck-irony flx-ido fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-magit evil-lisp-state evil-indent-plus evil-iedit-state evil-exchange evil-escape evil-ediff evil-args evil-anzu eval-sexp-fu ess-smart-equals ess-R-object-popup ess-R-data-view emmet-mode elisp-slime-nav dumb-jump disaster diff-hl define-word cython-mode counsel-projectile company-web company-tern company-statistics company-irony-c-headers company-irony company-ghci company-ghc company-cabal company-c-headers company-auctex company-anaconda column-enforce-mode color-theme-sanityinc-solarized coffee-mode cmm-mode cmake-mode clean-aindent-mode clang-format auto-yasnippet auto-highlight-symbol auto-dictionary auto-compile aggressive-indent adaptive-wrap ace-window ace-link ac-ispell)))
+    (company-lsp lsp-mode racer flycheck-rust seq cargo rust-mode flycheck-clang-analyzer flycheck-clang-tidy ivy-rtags org-category-capture iedit groovy-mode powerline flycheck-haskell let-alist undo-tree diminish highlight async f s dracula-theme winum unfill fuzzy auctex-latexmk flycheck-mypy insert-shebang fish-mode company-shell helm helm-core packed smartparens evil avy projectile hydra dash powershell rvm ruby-tools ruby-test-mode rubocop rspec-mode robe rbenv rake minitest chruby bundler inf-ruby focus-autosave-mode org-projectile org-present org-pomodoro alert log4e gntp org-download htmlize gnuplot dockerfile-mode docker tablist docker-tramp phpunit phpcbf php-extras php-auto-yasnippets drupal-mode php-mode toml-mode flycheck-ycmd company-ycmd ycmd request-deferred deferred helm-pydoc helm-hoogle helm-gitignore helm-css-scss helm-company helm-c-yasnippet flyspell-correct-helm org markdown-mode skewer-mode simple-httpd json-snatcher json-reformat multiple-cursors js2-mode haml-mode fringe-helper git-gutter+ git-gutter flyspell-correct pos-tip flycheck magit magit-popup git-commit with-editor ctable ess julia-mode counsel swiper ivy web-completion-data dash-functional tern irony ghc haskell-mode company yasnippet auctex anaconda-mode pythonic auto-complete helm-themes helm-swoop helm-projectile helm-mode-manager helm-flx helm-descbinds helm-ag ace-jump-helm-line yapfify yaml-mode ws-butler window-numbering which-key wgrep web-mode web-beautify volatile-highlights vi-tilde-fringe uuidgen use-package toc-org tagedit spacemacs-theme spaceline smex smeargle slim-mode scss-mode sass-mode rtags restart-emacs request rainbow-delimiters quelpa pyvenv pytest pyenv-mode py-isort pug-mode popwin pip-requirements persp-mode pcre2el paradox orgit org-plus-contrib org-bullets open-junk-file neotree mwim move-text mmm-mode markdown-toc magit-gitflow macrostep lorem-ipsum livid-mode live-py-mode linum-relative link-hint less-css-mode json-mode js2-refactor js-doc ivy-hydra irony-eldoc intero info+ indent-guide ido-vertical-mode hy-mode hungry-delete hlint-refactor hl-todo hindent highlight-parentheses highlight-numbers highlight-indentation hide-comnt help-fns+ helm-make haskell-snippets google-translate golden-ratio gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe git-gutter-fringe+ gh-md flyspell-correct-ivy flycheck-pos-tip flycheck-irony flx-ido fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-magit evil-lisp-state evil-indent-plus evil-iedit-state evil-exchange evil-escape evil-ediff evil-args evil-anzu eval-sexp-fu ess-smart-equals ess-R-object-popup ess-R-data-view emmet-mode elisp-slime-nav dumb-jump disaster diff-hl define-word cython-mode counsel-projectile company-web company-tern company-statistics company-irony-c-headers company-irony company-ghci company-ghc company-cabal company-c-headers company-auctex company-anaconda column-enforce-mode color-theme-sanityinc-solarized coffee-mode cmm-mode cmake-mode clean-aindent-mode clang-format auto-yasnippet auto-highlight-symbol auto-dictionary auto-compile aggressive-indent adaptive-wrap ace-window ace-link ac-ispell)))
  '(paradox-automatically-star t)
  '(safe-local-variable-values
    (quote
-    ((c-default-style . "bsd")
+    ((eval c-set-offset
+           (quote access-label)
+           -2)
+     (eval c-set-offset
+           (quote access-label)
+           2)
+     (eval c-set-offset
+           (quote access-label)
+           ++)
+     (eval c-set-offset
+           (quote innamespace)
+           0)
+     (c-set-offset innamespace .
+                   [0])
+     (c-set-offset
+      (quote innamespace)
+      [0])
+     (c-set-offset
+      (quote innamespace)
+      0)
+     (c-default-style . "bsd")
      (c++-clang-format-on-save . t)
      (c-default-style . "linux")))))
 (custom-set-faces
