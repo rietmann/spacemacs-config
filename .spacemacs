@@ -46,7 +46,11 @@ values."
      ;; ----------------------------------------------------------------
      ;; helm
      ivy
-     auto-completion
+     (auto-completion
+      ;; :variables
+      ;; spacemacs-default-company-backends '(company-lsp)
+      )
+
      ;; better-defaults
      emacs-lisp
      git
@@ -71,17 +75,20 @@ values."
      ;; gtags ;; tags for c/c++ and other langs
      ;; irony
 
+     
      ;; (ycmd :variables
      ;;       ycmd-server-command (list "/usr/bin/python" (file-truename "~/build/ycmd-git/ycmd"))
      ;;       ycmd-force-semantic-completion t)
 
      rtags
 
-
      (c-c++ :variables
             c-c++-default-mode-for-headers 'c++-mode
             ;; c-c++-enable-clang-support t
             )     
+
+     cquery
+     
      latex
      (python
       )
@@ -455,30 +462,33 @@ you should place your code here."
               ))
 
   ;; cquery
-  (use-package cquery
-    :load-path
-    "/home/rietmann/build/cquery/emacs"
-    :init
-    (progn
-      (require 'cc-mode)
-      (require 'lsp-mode)
-      (require 'cl-lib)
-      (require 'subr-x))
-    :config
-    ;; config
-    (setq cquery-executable "/home/rietmann/.local/stow/cquery/bin/cquery")
-    )
-  (add-hook 'c-mode-common-hook (lambda ()
-                                  ;; (message "setting f5 to compile")
-                                  (lsp-cquery-enable)
-                                  ))
+  ;; (use-package cquery
+  ;;   :load-path
+  ;;   "/home/rietmann/build/cquery/emacs"
+  ;;   :init
+  ;;   (progn
+  ;;     (require 'cc-mode)
+  ;;     (require 'lsp-mode)
+  ;;     (require 'cl-lib)
+  ;;     (require 'subr-x))
+  ;;   :config
+  ;;   ;; config
+  ;;   (setq cquery-executable "/home/rietmann/.local/stow/cquery/bin/cquery")
+  ;;   )
+  
+  ;; (add-hook 'c-mode-common-hook (lambda ()
+  ;;                                 (message "enable lsp for c++")
+  ;;                                 (lsp-cquery-enable)
+  ;;                                 ))
 
-  (with-eval-after-load 'company
-    (push 'company-lsp company-backends)
-    )
 
-  (with-eval-after-load 'lsp-mode
-    (require 'lsp-flycheck))
+  ;; (push 'company-lsp company-backends)
+  ;; (with-eval-after-load 'company
+    
+  ;;   )
+
+  ;; (with-eval-after-load 'lsp-mode
+  ;;   (require 'lsp-flycheck))
 
   ;; toggle line numbers when emacs is in focus or not
   ;; (add-hook 'focus-out-hook
