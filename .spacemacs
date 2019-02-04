@@ -33,7 +33,7 @@ This function should only modify configuration layer settings."
 
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
-   '(
+   '(nginx
      shell-scripts
      windows-scripts
      ruby
@@ -52,7 +52,7 @@ This function should only modify configuration layer settings."
       ;; :variables
       ;; spacemacs-default-company-backends '(company-lsp)
       )
-     ocaml
+     ;; ocaml
      ;; better-defaults
      emacs-lisp
      git
@@ -66,7 +66,7 @@ This function should only modify configuration layer settings."
      ;;        shell-default-position 'bottom)
      spell-checking
      syntax-checking
-     
+
      ;; version-control
      (version-control :variables
                       version-control-diff-tool 'git-gutter+)
@@ -82,28 +82,39 @@ This function should only modify configuration layer settings."
      ;;       ycmd-server-command (list "/usr/bin/python" (file-truename "~/build/ycmd-git/ycmd"))
      ;;       ycmd-force-semantic-completion t)
 
-     
+     (julia :variables
+            julia-mode-enable-ess t
+            ;; julia-mode-enable-lsp t
+            )
 
      (c-c++ :variables
             c-c++-default-mode-for-headers 'c++-mode
+            c-c++-adopt-subprojects t
+            c-c++-backend 'lsp-ccls
+            c-c++-lsp-executable (file-truename "~/.local/bin/ccls")
             ;; c-c++-enable-clang-support t
             ;; c-c++-enable-rtags-support t
             )     
      ;; rtags
 
-     lsp
+     (lsp :variables
+          lsp-ui-remap-xref-keybindings t
+          lsp-ui-sideline-enable nil
+          )
      ;; myjulia
-     cquery
-     reason
+     ;; cquery
+     ;; ccls
+     ;; reason
 
+     racket
+     
      unicode-fonts
      cmake
      latex
      (python
-      ;;:variables
-      ;;python-backend 'lsp
       :variables
-      python-backedn 'anaconda
+      python-backend 'lsp
+      ;; python-backedn 'anaconda
       )
 
      ipython-notebook
@@ -113,6 +124,8 @@ This function should only modify configuration layer settings."
            rust-enable-format-on-save t)
      markdown
      ess
+     treemacs
+     ;; spotify
      (haskell :variables
               haskell-completion-backend 'intero
      ;;          ;; haskell-enable-ghc-mod-support nil
@@ -135,6 +148,7 @@ This function should only modify configuration layer settings."
                                       lsp-mode
                                       company-lsp
                                       super-save
+                                      ;; cuda-mode
                                       ;; focus-autosave-mode
                                       )
    ;; A list of packages that cannot be updated.
@@ -259,8 +273,11 @@ It should only modify the values of Spacemacs settings."
    ;; List of themes, the first of the list is loaded when spacemacs starts.
    ;; Press `SPC T n' to cycle to the next theme in the list (works great
    ;; with 2 themes variants, one dark and one light)
-   dotspacemacs-themes '(spacemacs-dark
-                         spacemacs-light)
+   dotspacemacs-themes '(doom-one
+                         doom-one-light
+                         ;; spacemacs-dark
+                         ;; spacemacs-light
+                         )
 
    ;; Set the theme for the Spaceline. Supported themes are `spacemacs',
    ;; `all-the-icons', `custom', `vim-powerline' and `vanilla'. The first three
@@ -421,7 +438,7 @@ It should only modify the values of Spacemacs settings."
    ;; If non-nil the frame is maximized when Emacs starts up.
    ;; Takes effect only if `dotspacemacs-fullscreen-at-startup' is nil.
    ;; (default nil) (Emacs 24.4+ only)
-   dotspacemacs-maximized-at-startup nil
+   dotspacemacs-maximized-at-startup t
 
    ;; A value from the range (0..100), in increasing opacity, which describes
    ;; the transparency level of a frame when it's active or selected.
@@ -577,6 +594,12 @@ layers configuration.
 This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
+  ;; (use-package cuda-mode
+  ;;   :defer t)
+
+  ;; cuda-mode kinda sucks...
+  (add-to-list 'auto-mode-alist '("\\.cu\\'" . c++-mode))
+
   (windmove-default-keybindings)
   (require 'flycheck-mypy)
   
@@ -630,20 +653,32 @@ you should place your code here."
 
   ;; cquery
   ;; https://github.com/scturtle/dotfiles/blob/0c0765f7fa331f652a6a4188427ecb78a1540ee0/spacemacs/.spacemacs#L442-L454
-  (setq cquery-additional-arguments (list "--log-file" "/home/rietmann/.local/logs/cquery.log"))
-  (setq cquery-executable "/home/rietmann/.local/stow/cquery/bin/cquery")
-  (setq cquery-project-roots '("~/drz/kinesim" "/home/rietmann/build/kinesim-ci/kinesim"))
+  ;; (setq cquery-additional-arguments (list "--log-file" "/home/rietmann/.local/logs/cquery.log"))
+  ;; (setq cquery-executable "/home/rietmann/.local/stow/cquery/bin/cquery")
+  ;; (setq cquery-project-roots '("~/drz/kinesim" "/home/rietmann/build/kinesim-ci/kinesim"))
+
+  
+  ;; (setq ccls-project-roots '("/home/rietmann/drz/kinesim" "/home/rietmann/build/kinesim-ci/kinesim"))
+  
   (with-eval-after-load 'projectile
     (setq projectile-project-root-files-top-down-recurring
           (append '("compile_commands.json"
                     ".cquery")
                   projectile-project-root-files-top-down-recurring)))
   ;; not needed by mylsp
-  (spacemacs|add-company-backends :backends company-lsp :modes c-mode-common)
-  (define-key lsp-ui-mode-map (kbd "C-M-.") #'lsp-ui-peek-find-definitions)
+  
+
+  ;; fixes bug: https://github.com/syl20bnr/spacemacs/issues/10938
+  ;; https://github.com/syl20bnr/spacemacs/issues/9700
+  ;; https://debbugs.gnu.org/cgi/bugreport.cgi?bug=31586
+  (setq frame-title-format nil)
+
+  ;; (require 'lsp-ui)
   ;; (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
-  (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references)
-  (define-key lsp-ui-mode-map (kbd "<f8>") #'imenu-list-smart-toggle)
+  ;; (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references)
+  ;; (define-key lsp-ui-mode-map (kbd "C-M-.") #'lsp-ui-peek-find-definitions)
+
+  ;; (define-key lsp-ui-mode-map (kbd "<f8>") #'imenu-list-smart-toggle)
   ;; (lsp-ui-peek-jump-backward)
   ;; (lsp-ui-peek-jump-forward)
 
@@ -651,9 +686,10 @@ you should place your code here."
   ;; (setq lsp-highlight-symbol-at-point nil)
   ;; (face-spec-set 'lsp-face-highlight-textual '((t :background nil :inherit hl-line)))
   
-  (setq lsp-ui-sideline-show-hover nil)
+  ;; (setq lsp-ui-sideline-show-hover nil)
   (setq lsp-enable-indentation nil)
-  (setq lsp-ui-peek-always-show t)
+  ;; (setq lsp-ui-peek-always-show t)
+
   ;; (setq company-lsp-cache-candidates nil)
   ;; (setq company-lsp-async t)
   ;; (setq company-transformers nil)
@@ -779,7 +815,7 @@ This function is called at the very end of Spacemacs initialization."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (tide ob-ipython ein request-deferred websocket yasnippet-snippets yapfify yaml-mode ws-butler winum which-key wgrep web-mode web-beautify volatile-highlights vi-tilde-fringe uuidgen utop use-package unicode-fonts unfill tuareg toml-mode toc-org tagedit symon super-save string-inflection spaceline-all-the-icons smex smeargle slim-mode scss-mode sass-mode rvm ruby-tools ruby-test-mode ruby-refactor ruby-hash-syntax rubocop rspec-mode robe restart-emacs request rbenv rake rainbow-delimiters racer pyvenv pytest pyenv-mode py-isort pug-mode powershell popwin pippel pipenv pip-requirements phpunit phpcbf php-extras php-auto-yasnippets persp-mode password-generator paradox overseer orgit org-projectile org-present org-pomodoro org-mime org-download org-bullets org-brain open-junk-file ocp-indent neotree nameless mwim move-text mmm-mode minitest merlin markdown-toc magit-svn magit-gitflow macrostep lsp-ui lsp-python lsp-javascript-typescript lorem-ipsum livid-mode live-py-mode linum-relative link-hint less-css-mode json-navigator js2-refactor js-doc ivy-xref ivy-rtags ivy-purpose ivy-hydra intero insert-shebang indent-guide importmagic impatient-mode hungry-delete hlint-refactor hl-todo hindent highlight-parentheses highlight-numbers highlight-indentation helm-make haskell-snippets groovy-mode google-translate google-c-style golden-ratio gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe git-gutter-fringe+ gh-md fuzzy font-lock+ flyspell-correct-ivy flycheck-rust flycheck-rtags flycheck-pos-tip flycheck-mypy flycheck-haskell flycheck-clang-tidy flycheck-clang-analyzer flycheck-bashate flx-ido fish-mode fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-org evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-magit evil-lisp-state evil-lion evil-indent-plus evil-iedit-state evil-goggles evil-exchange evil-ediff evil-cleverparens evil-args evil-anzu eval-sexp-fu ess-R-data-view emmet-mode elisp-slime-nav editorconfig dumb-jump drupal-mode dracula-theme dockerfile-mode docker disaster diminish diff-hl define-word dante cython-mode cquery counsel-projectile counsel-css company-web company-tern company-statistics company-shell company-rtags company-php company-lsp company-ghci company-ghc company-cabal company-c-headers company-auctex company-anaconda column-enforce-mode cmm-mode cmake-mode cmake-ide clean-aindent-mode clang-format chruby centered-cursor-mode cargo bundler browse-at-remote auto-yasnippet auto-highlight-symbol auto-dictionary auto-compile auctex-latexmk aggressive-indent ace-window ace-link ac-ispell))))
+    (lsp-ui intero eyebrowse ein doom-modeline eldoc-eval docker cargo auto-compile ess julia-mode smartparens helm helm-core lsp-mode magit git-commit powerline flycheck treemacs projectile evil goto-chg org-plus-contrib yasnippet-snippets yapfify yaml-mode ws-butler writeroom-mode with-editor winum which-key wgrep websocket web-mode web-beautify volatile-highlights vi-tilde-fringe uuidgen use-package unicode-fonts unfill undo-tree treemacs-projectile toml-mode toc-org tide tagedit tablist symon super-save string-inflection spaceline-all-the-icons smex smeargle slim-mode shrink-path seeing-is-believing scss-mode sass-mode rvm ruby-tools ruby-test-mode ruby-refactor ruby-hash-syntax rubocop rspec-mode robe restart-emacs request rbenv rake rainbow-delimiters racket-mode racer pyvenv pytest pyenv-mode py-isort pug-mode prettier-js powershell popwin pippel pipenv pip-requirements phpunit phpcbf php-extras php-auto-yasnippets pfuture persp-mode password-generator paradox packed overseer orgit org-projectile org-present org-pomodoro org-mime org-download org-bullets org-brain open-junk-file ob-ipython nginx-mode nameless mwim move-text mmm-mode minitest markdown-toc magit-svn magit-gitflow macrostep lsp-julia lorem-ipsum livid-mode live-py-mode link-hint julia-repl json-navigator json-mode js2-refactor js-doc ivy-yasnippet ivy-xref ivy-rtags ivy-purpose ivy-hydra insert-shebang indent-guide importmagic impatient-mode hungry-delete ht hlint-refactor hl-todo hindent highlight-parentheses highlight-numbers highlight-indentation helm-make haskell-snippets groovy-mode google-translate google-c-style golden-ratio gnuplot gitignore-templates gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe git-gutter-fringe+ gh-md fuzzy font-lock+ flyspell-correct-ivy flycheck-rust flycheck-rtags flycheck-pos-tip flycheck-mypy flycheck-haskell flycheck-clang-tidy flycheck-clang-analyzer flycheck-bashate flx-ido fish-mode fill-column-indicator fancy-battery expand-region evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-org evil-numbers evil-nerd-commenter evil-matchit evil-magit evil-lisp-state evil-lion evil-indent-plus evil-iedit-state evil-goggles evil-exchange evil-ediff evil-cleverparens evil-args evil-anzu eval-sexp-fu ess-R-data-view emmet-mode elisp-slime-nav editorconfig dumb-jump drupal-mode dracula-theme dotenv-mode doom-themes dockerfile-mode docker-tramp disaster diminish diff-hl define-word cython-mode cquery counsel-projectile counsel-css company-web company-tern company-statistics company-shell company-rtags company-php company-lsp company-cabal company-c-headers company-auctex company-anaconda column-enforce-mode cmm-mode cmake-mode cmake-ide clean-aindent-mode clang-format chruby centered-cursor-mode ccls bundler browse-at-remote auto-yasnippet auto-highlight-symbol auto-dictionary auctex-latexmk aggressive-indent ace-window ace-link ac-ispell))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
